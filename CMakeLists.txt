@@ -14,17 +14,8 @@ ExternalProject_Add(Jsoncpp
     GIT_REPOSITORY git@github.com:open-source-parsers/jsoncpp.git
     GIT_TAG 1.9.5
     CMAKE_ARGS -DJSONCPP_WITH_TESTS=OFF -DJSONCPP_WITH_POST_BUILD_UNITTEST=OFF
-        -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}
+        -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DBUILD_SHARED_LIBS=OFF
 )
-
-ExternalProject_Add(libjson-rpc-cpp
-    GIT_REPOSITORY git@github.com:cinemast/libjson-rpc-cpp.git
-    GIT_TAG v1.4.1
-    CMAKE_ARGS -DTCP_SOCKET_SERVER=YES -DTCP_SOCKET_CLIENT=YES -DHTTP_SERVER=NO
-        -DHTTP_CLIENT=NO -DREDIS_SERVER=NO -DREDIS_CLIENT=NO -DCOMPILE_TESTS=NO
-        -DCOMPILE_STUBGEN=NO -DCOMPILE_EXAMPLES=NO -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}
-)
-ExternalProject_Add_StepDependencies(libjson-rpc-cpp build Jsoncpp)
 
 link_directories(${CMAKE_BINARY_DIR}/lib)
 include_directories(${CMAKE_BINARY_DIR}/include)
@@ -32,14 +23,21 @@ include_directories(${CMAKE_BINARY_DIR}/include)
 add_executable(robotCommand
     src/main.cpp
     src/robot.cpp
+    src/jsonrpctcpclient.cpp
 )
 
-target_link_libraries(robotCommand jsonrpccpp-common jsonrpccpp-client jsoncpp)
-add_dependencies(robotCommand Jsoncpp libjson-rpc-cpp)
+target_link_libraries(robotCommand jsoncpp)
+if (WIN32)
+    target_link_libraries(robotCommand ws2_32)
+endif ()
+add_dependencies(robotCommand Jsoncpp)
 
 target_compile_options(robotCommand PRIVATE
   "$<${gcc_like_cxx}:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused>"
   "$<${msvc_cxx}:-W3>"
 )
 
-#add_compile_definitions(COLLISION_DEBUG)
+#add_compile_definitions(JSONRPC_DEBUG)
+if (WIN32)
+    add_compile_definitions(_WIN32_WINNT=0x0501)
+endif ()

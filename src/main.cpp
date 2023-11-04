@@ -1,7 +1,5 @@
 #include "robot.hpp"
 
-#include <jsonrpccpp/client.h>
-#include <jsonrpccpp/client/connectors/tcpsocketclient.h>
 #include <iostream>
 #include <cstdlib>
 #include <sstream>
@@ -24,9 +22,7 @@ int main(int argc, char ** argv)
     }
 
     std::cout << "Try to connect to " << hostIpAddress << ":" << tcpPort << " ..." << std::endl;
-    jsonrpc::TcpSocketClient tcpClient(hostIpAddress, tcpPort);
-    jsonrpc::Client jsonRcpClient(tcpClient);
-    Robot robot(jsonRcpClient);
+    Robot robot(hostIpAddress, tcpPort);
 
     try
     {
@@ -38,8 +34,10 @@ int main(int argc, char ** argv)
             std::this_thread::sleep_for(1s);
         }
     }
-    catch (jsonrpc::JsonRpcException & e)
+    catch (std::exception & e)
     {
         std::cerr << e.what() << std::endl;
     }
+
+    return 0;
 }

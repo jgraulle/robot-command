@@ -1,18 +1,15 @@
 #ifndef ROBOT_HPP
 #define ROBOT_HPP
 
-#include <string>
+#include "jsonrpctcpclient.hpp"
 
-namespace jsonrpc
-{
-    class Client;
-}
+#include <string>
 
 
 class Robot
 {
 public:
-    Robot(jsonrpc::Client & jsonRcpClient);
+    Robot(const std::string & hostIpAddress, uint16_t tcpPort);
     ~Robot();
 
     bool isLineTrackDetected(std::size_t index);
@@ -24,7 +21,7 @@ public:
     void setMotorsSpeed(float rightValue, float leftValue);
 
 private:
-    jsonrpc::Client & _jsonRcpClient;
+    JsonRpcTcpClient _jsonRpcTcpClient;
 };
 
 #endif

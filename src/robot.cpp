@@ -1,11 +1,12 @@
 #include "robot.hpp"
 
-#include <jsonrpccpp/client.h>
+#include <json/value.h>
 
 
-Robot::Robot(jsonrpc::Client & jsonRcpClient)
-    : _jsonRcpClient(jsonRcpClient)
-{}
+Robot::Robot(const std::string & hostIpAddress, uint16_t tcpPort)
+    : _jsonRpcTcpClient(hostIpAddress, tcpPort)
+{
+}
 
 Robot::~Robot()
 {}
@@ -14,7 +15,7 @@ bool Robot::isLineTrackDetected(std::size_t index)
 {
     Json::Value params;
     params["index"] = index;
-    return _jsonRcpClient.CallMethod("isLineTrackDetected", params).asBool();
+    return _jsonRpcTcpClient.callMethod("isLineTrackDetected", params).asBool();
 }
 
 std::string Robot::motorIndexToString(MotorIndex motorIndex)
@@ -35,12 +36,13 @@ void Robot::setMotorSpeed(MotorIndex motorIndex, float value)
     Json::Value params;
     params["motorIndex"] = motorIndexToString(motorIndex);
     params["value"] = value;
-    _jsonRcpClient.CallNotification("setMotorSpeed", params);
+    _jsonRpcTcpClient.callNotification("setMotorSpeed", params);
+
 }
 void Robot::setMotorsSpeed(float rightValue, float leftValue)
 {
     Json::Value params;
     params["rightValue"] = rightValue;
     params["leftValue"] = leftValue;
-    _jsonRcpClient.CallNotification("setMotorsSpeed", params);
+    _jsonRpcTcpClient.callNotification("setMotorsSpeed", params);
 }
