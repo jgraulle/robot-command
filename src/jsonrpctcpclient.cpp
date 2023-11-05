@@ -13,8 +13,8 @@
 
 JsonRpcTcpClient::JsonRpcTcpClient(const std::string & hostIpAddress, unsigned short tcpPort)
     : _ioc()
+    , _socket(_ioc)
     , _jsonRpcId(1)
-    , _endpoint(asio::ip::address::from_string(hostIpAddress), tcpPort)
     , _tcpStreambuf()
     , _tcpOutStream(&_tcpStreambuf)
     , _tcpInStream(&_tcpStreambuf)
@@ -23,17 +23,17 @@ JsonRpcTcpClient::JsonRpcTcpClient(const std::string & hostIpAddress, unsigned s
     Json::StreamWriterBuilder jsonStreamWriterBuilder;
     jsonStreamWriterBuilder["indentation"] = "";
     _jsonStreamWriter.reset(jsonStreamWriterBuilder.newStreamWriter());
+
+    _socket.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string(hostIpAddress), tcpPort));
 }
 
 JsonRpcTcpClient::~JsonRpcTcpClient()
 {
+    _socket.close();
 }
 
 void JsonRpcTcpClient::callNotification(const char * methodName, const Json::Value & params)
 {
-    asio::ip::tcp::socket socket(_ioc);
-    socket.connect(_endpoint);
-
     // Prepare message
     Json::Value message;
     message["jsonrpc"] = "2.0";
@@ -43,7 +43,7 @@ void JsonRpcTcpClient::callNotification(const char * methodName, const Json::Val
     // Send message
     _jsonStreamWriter->write(message, &_tcpOutStream);
     _tcpOutStream << static_cast<char>(0x0A);
-    asio::write(socket, _tcpStreambuf);
+    asio::write(_socket, _tcpStreambuf);
 
 #ifdef JSONRPC_DEBUG
     // Print message
@@ -51,15 +51,10 @@ void JsonRpcTcpClient::callNotification(const char * methodName, const Json::Val
     _jsonStreamWriter->write(message, &std::cout);
     std::cout << std::endl;
 #endif
-
-    socket.close();
 }
 
 Json::Value JsonRpcTcpClient::callMethod(const char * methodName, const Json::Value & param)
 {
-    asio::ip::tcp::socket socket(_ioc);
-    socket.connect(_endpoint);
-
     // Prepare message
     Json::Value message;
     message["jsonrpc"] = "2.0";
@@ -70,12 +65,12 @@ Json::Value JsonRpcTcpClient::callMethod(const char * methodName, const Json::Va
     // Send message
     _jsonStreamWriter->write(message, &_tcpOutStream);
     _tcpOutStream << static_cast<char>(0x0A);
-    asio::write(socket, _tcpStreambuf);
+    asio::write(_socket, _tcpStreambuf);
 
 #ifdef JSONRPC_DEBUG
     // Print message
     std::cout << "send message ";
-    _jsonStreamWriter->write(message, &std::cout);
+    jsonStreamWriter->write(message, &std::cout);
     std::cout << std::endl;
 #endif
 
@@ -83,7 +78,7 @@ Json::Value JsonRpcTcpClient::callMethod(const char * methodName, const Json::Va
 #ifdef JSONRPC_DEBUG
     std::cout << "wait response..." << std::endl;
 #endif
-    asio::read_until(socket, _tcpStreambuf, 0x0A);
+    asio::read_until(_socket, _tcpStreambuf, 0x0A);
 
     // Extract one json message
     std::string messageJsonStr;
@@ -105,7 +100,6 @@ Json::Value JsonRpcTcpClient::callMethod(const char * methodName, const Json::Va
     std::cout << std::endl;
 #endif
 
-    socket.close();
     _jsonRpcId++;
     return responseJson["result"];
 }

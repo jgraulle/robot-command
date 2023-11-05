@@ -21,6 +21,9 @@ public:
     void setMotorsSpeed(float rightValue, float leftValue);
 
 private:
+    Robot(const Robot &) = delete;
+    Robot & operator=(const Robot &) = delete;
+
     JsonRpcTcpClient _jsonRpcTcpClient;
 };
 

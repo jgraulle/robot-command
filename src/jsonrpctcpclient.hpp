@@ -22,9 +22,12 @@ public:
     Json::Value callMethod(const char * methodName, const Json::Value & param);
 
 private:
+    JsonRpcTcpClient(const JsonRpcTcpClient &) = delete;
+    JsonRpcTcpClient & operator=(const JsonRpcTcpClient &) = delete;
+
     asio::io_context _ioc;
+    asio::ip::tcp::socket _socket;
     int _jsonRpcId;
-    asio::ip::tcp::endpoint _endpoint;
     asio::streambuf _tcpStreambuf;
     std::ostream _tcpOutStream;
     std::istream _tcpInStream;
