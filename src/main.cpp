@@ -29,9 +29,9 @@ int main(int argc, char ** argv)
         while (true)
         {
             robot.setMotorsSpeed(1.0, 1.0);
-            std::this_thread::sleep_for(1s);
+            robot.isLineTrackDetectedWait(0, 1s);
             robot.setMotorsSpeed(-0.2, 0.2);
-            std::this_thread::sleep_for(1s);
+            robot.isLineTrackDetectedWait(0, 1s);
         }
     }
     catch (std::exception & e)

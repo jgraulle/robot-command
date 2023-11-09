@@ -9,6 +9,7 @@
 #include <asio/read_until.hpp>
 #include <asio/read.hpp>
 #include <asio/buffer.hpp>
+#include <thread>
 
 
 JsonRpcTcpClient::JsonRpcTcpClient(const std::string & hostIpAddress, unsigned short tcpPort)
@@ -17,8 +18,9 @@ JsonRpcTcpClient::JsonRpcTcpClient(const std::string & hostIpAddress, unsigned s
     , _jsonRpcId(1)
     , _tcpStreambuf()
     , _tcpOutStream(&_tcpStreambuf)
-    , _tcpInStream(&_tcpStreambuf)
     , _jsonStreamWriter(nullptr)
+    , _receiveMethodResponseSem(0)
+    , _isStartReceive(false)
 {
     Json::StreamWriterBuilder jsonStreamWriterBuilder;
     jsonStreamWriterBuilder["indentation"] = "";
@@ -30,6 +32,18 @@ JsonRpcTcpClient::JsonRpcTcpClient(const std::string & hostIpAddress, unsigned s
 JsonRpcTcpClient::~JsonRpcTcpClient()
 {
     _socket.close();
+}
+
+void JsonRpcTcpClient::bindNotification(const std::string & methodName, const std::function<void(Json::Value)> & notificationHandle)
+{
+    assert(!_isStartReceive);
+    _notificationHandles.insert(std::make_pair(methodName, notificationHandle));
+}
+
+void JsonRpcTcpClient::startReceive()
+{
+    _isStartReceive = true;
+    std::thread([](JsonRpcTcpClient * thus){thus->receive();}, this).detach();
 }
 
 void JsonRpcTcpClient::callNotification(const char * methodName, const Json::Value & params)
@@ -70,7 +84,7 @@ Json::Value JsonRpcTcpClient::callMethod(const char * methodName, const Json::Va
 #ifdef JSONRPC_DEBUG
     // Print message
     std::cout << "send message ";
-    jsonStreamWriter->write(message, &std::cout);
+    _jsonStreamWriter->write(message, &std::cout);
     std::cout << std::endl;
 #endif
 
@@ -78,20 +92,10 @@ Json::Value JsonRpcTcpClient::callMethod(const char * methodName, const Json::Va
 #ifdef JSONRPC_DEBUG
     std::cout << "wait response..." << std::endl;
 #endif
-    asio::read_until(_socket, _tcpStreambuf, 0x0A);
-
-    // Extract one json message
-    std::string messageJsonStr;
-    std::getline(_tcpInStream, messageJsonStr, static_cast<char>(0x0A));
-
-    // Parse this json message
-    Json::CharReaderBuilder builder;
-    JSONCPP_STRING errs;
-    Json::Value responseJson;
-    const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
-    if (!reader->parse(messageJsonStr.c_str(), messageJsonStr.c_str()+messageJsonStr.size(),
-            &responseJson, &errs))
-        throw std::runtime_error(errs);
+    _receiveMethodResponseSem.acquire();
+    Json::Value responseJson = _receiveMethodResponseJsonValue;
+    assert(_jsonRpcId == responseJson["id"]);
+    _receiveMethodResponseJsonValue = Json::Value();
 
 #ifdef JSONRPC_DEBUG
     // Print response
@@ -102,4 +106,56 @@ Json::Value JsonRpcTcpClient::callMethod(const char * methodName, const Json::Va
 
     _jsonRpcId++;
     return responseJson["result"];
+}
+
+void JsonRpcTcpClient::receive()
+{
+    asio::streambuf tcpStreambuf;
+    std::istream tcpInStream(&tcpStreambuf);
+
+    while (true)
+    {
+        // Wait message
+        asio::read_until(_socket, tcpStreambuf, 0x0A);
+#ifdef JSONRPC_DEBUG
+        std::cout << "wait message..." << std::endl;
+#endif
+
+        // Extract one json message
+        std::string messageJsonStr;
+        std::getline(tcpInStream, messageJsonStr, static_cast<char>(0x0A));
+
+        // Parse this json message
+        Json::CharReaderBuilder builder;
+        JSONCPP_STRING errs;
+        Json::Value messageJson;
+        const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+        if (!reader->parse(messageJsonStr.c_str(), messageJsonStr.c_str()+messageJsonStr.size(),
+                &messageJson, &errs))
+            throw std::runtime_error(errs);
+
+        // If method response
+        if (messageJson.isMember("id"))
+        {
+            assert(_receiveMethodResponseJsonValue.isNull());
+            _receiveMethodResponseJsonValue = messageJson;
+            _receiveMethodResponseSem.release();
+        }
+        // If notification
+        else
+        {
+#ifdef JSONRPC_DEBUG
+            // Print notification
+            std::cout << "Receive notification ";
+            _jsonStreamWriter->write(messageJson, &std::cout);
+            std::cout << std::endl;
+#endif
+            // Find the notification and execute it
+            auto it = _notificationHandles.find(messageJson["method"].asString());
+            if (it != _notificationHandles.end())
+            {
+                it->second(messageJson["params"]);
+            }
+        }
+    }
 }
