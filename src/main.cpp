@@ -23,15 +23,16 @@ int main(int argc, char ** argv)
 
     std::cout << "Try to connect to " << hostIpAddress << ":" << tcpPort << " ..." << std::endl;
     Robot robot(hostIpAddress, tcpPort);
+    robot.waitReady();
 
     try
     {
         while (true)
         {
             robot.setMotorsSpeed(1.0, 1.0);
-            robot.isLineTrackDetectedWait(0, 1s);
+            robot.getLineTracksIsDetected().waitChanged(0, 1s);
             robot.setMotorsSpeed(-0.2, 0.2);
-            robot.isLineTrackDetectedWait(0, 1s);
+            robot.getLineTracksIsDetected().waitChanged(0, 1s);
         }
     }
     catch (std::exception & e)
