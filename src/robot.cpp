@@ -6,13 +6,15 @@
 
 Robot::Robot(const std::string & hostIpAddress, uint16_t tcpPort)
     : _jsonRpcTcpClient(hostIpAddress, tcpPort)
-    , _irProximitysDistanceDetected()
-    , _lineTracksIsDetected()
-    , _lineTracksValue()
-    , _speedsValue()
-    , _switchsIsDetected()
-    , _ultrasonicsDistanceDetected()
+    , _irProximitysDistanceDetected(this, EventType::IR_PROXIMITYS_DISTANCE_DETECTED)
+    , _lineTracksIsDetected(this, EventType::LINE_TRACKS_IS_DETECTED)
+    , _lineTracksValue(this, EventType::LINE_TRACKS_VALUE)
+    , _speedsValue(this, EventType::SPEEDS_VALUE)
+    , _switchsIsDetected(this, EventType::SWITCHS_IS_DETECTED)
+    , _ultrasonicsDistanceDetected(this, EventType::ULTRASONICS_DISTANCE_DETECTED)
     , _isReadySemaphore(0)
+    , _eventCvMutex()
+    , _eventCv()
 {
     _jsonRpcTcpClient.bindNotification("irProximityDistanceDetected", [this](const Json::Value & params){
         std::size_t index = params["index"].asUInt();
@@ -75,4 +77,62 @@ void Robot::setMotorsSpeed(float rightValue, float leftValue)
     params["rightValue"] = rightValue;
     params["leftValue"] = leftValue;
     _jsonRpcTcpClient.callNotification("setMotorsSpeed", params);
+}
+
+void Robot::notify(EventType eventType, int changedCount)
+{
+    {
+        std::lock_guard<std::mutex> lk(_eventCvMutex);
+        _lastNotifiedEventType.insert_or_assign(eventType, changedCount);
+    }
+    _eventCv.notify_all();
+}
+
+std::map<Robot::EventType, int> Robot::waitParam(std::set<EventType> eventTypes)
+{
+    std::map<EventType, int> toReturn;
+    std::unique_lock<std::mutex> lk(_eventCvMutex);
+    for (auto eventType : eventTypes)
+    {
+        int changedCount = -1;
+        auto it = _lastNotifiedEventType.find(eventType);
+        if (it != _lastNotifiedEventType.end())
+            changedCount = it->second;
+        toReturn.insert(std::make_pair(eventType, changedCount));
+    }
+    return toReturn;
+}
+
+void Robot::waitChanged(EventType eventType) {
+    auto eventTypes = waitParam({eventType});
+    waitChanged(eventTypes);
+}
+
+Robot::EventType Robot::waitChanged(const std::set<EventType> & eventTypes)
+{
+    auto eventTypesWithChangedCount = waitParam(eventTypes);
+    return waitChanged(eventTypesWithChangedCount);
+}
+
+void Robot::waitChanged(EventType eventType, int & changedCount) {
+    std::map<EventType, int> eventTypes{{eventType, changedCount}};
+    waitChanged(eventTypes);
+    changedCount = eventTypes.at(eventType);
+}
+
+Robot::EventType Robot::waitChanged(std::map<EventType, int> & eventTypes) {
+    std::unique_lock<std::mutex> lk(_eventCvMutex);
+    EventType notifiedEventType;
+    _eventCv.wait(lk, [eventTypes, &notifiedEventType, lastNotifiedEventType = std::ref(_lastNotifiedEventType)]{
+        for (auto eventType : eventTypes) {
+            if (lastNotifiedEventType.get().at(eventType.first)>eventType.second)
+            {
+                lastNotifiedEventType.get().at(eventType.first) = eventType.second;
+                notifiedEventType = eventType.first;
+                return true;
+            }
+        }
+        return false;
+    });
+    return notifiedEventType;
 }

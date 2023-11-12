@@ -4,8 +4,11 @@
 #include "jsonrpctcpclient.hpp"
 
 #include <string>
-#include <semaphore>
 #include <optional>
+#include <semaphore>
+#include <condition_variable>
+#include <set>
+#include <chrono>
 
 
 class Robot
@@ -14,16 +17,27 @@ public:
     Robot(const std::string & hostIpAddress, uint16_t tcpPort);
     ~Robot();
 
-    inline void waitReady() {_isReadySemaphore.acquire();}
+    inline void waitReady() {using namespace std::chrono_literals; _isReadySemaphore.acquire();
+            std::this_thread::sleep_for(100ms);}
+
+    enum class EventType
+    {
+        IR_PROXIMITYS_DISTANCE_DETECTED,
+        LINE_TRACKS_IS_DETECTED,
+        LINE_TRACKS_VALUE,
+        SPEEDS_VALUE,
+        SWITCHS_IS_DETECTED,
+        ULTRASONICS_DISTANCE_DETECTED
+    };
 
     template<typename T>
     class Values
     {
     public:
+        Values(Robot * robot, EventType eventType) : _robot(robot), _eventType(eventType) {}
+
         inline T get(std::size_t index) const {const std::lock_guard<std::mutex> lock(_mutex); return _values.at(index)._value.value();}
-        void waitChanged(std::size_t index) const {_values.at(index)._semaphore->acquire();}
-        template<typename _Rep, typename _Period>
-        bool waitChanged(std::size_t index, const std::chrono::duration<_Rep, _Period> & duration) const {return _values.at(index)._semaphore->try_acquire_for(duration);}
+        inline int getChangedCount(std::size_t index) const {const std::lock_guard<std::mutex> lock(_mutex); return _values.at(index)._changedCount.value();}
         void set(std::size_t index, T v, int changedCount)
         {
             const std::lock_guard<std::mutex> lock(_mutex);
@@ -38,19 +52,20 @@ public:
             }
             else
                 value._changedCount = changedCount;
-            value._semaphore->release();
+            _robot->notify(_eventType, changedCount);
         }
 
     private:
         struct Value
         {
-            Value() : _value(), _changedCount(), _semaphore(std::make_unique<std::binary_semaphore>(0)) {}
+            Value() : _value(), _changedCount() {}
             std::optional<T> _value;
             std::optional<int> _changedCount;
-            mutable std::unique_ptr<std::binary_semaphore> _semaphore;
         };
         std::vector<Value> _values;
         mutable std::mutex _mutex;
+        Robot * _robot;
+        EventType _eventType;
     };
 
     const Values<std::size_t> & getIrProximitysDistanceDetected() const {return _irProximitysDistanceDetected;}
@@ -66,6 +81,23 @@ public:
     void setMotorSpeed(MotorIndex motorIndex, float value);
     void setMotorsSpeed(float rightValue, float leftValue);
 
+    void notify(EventType eventType, int changedCount);
+    std::map<EventType, int> waitParam(std::set<EventType> eventTypes);
+
+    void waitChanged(EventType eventType);
+    void waitChanged(EventType eventType, int & changedCount);
+    EventType waitChanged(const std::set<EventType> & eventType);
+    EventType waitChanged(std::map<EventType, int> & eventTypes);
+
+    template<typename _Rep, typename _Period>
+    bool waitChanged(EventType eventType, const std::chrono::duration<_Rep, _Period> & duration);
+    template<typename _Rep, typename _Period>
+    bool waitChanged(EventType eventType, int & changedCount, const std::chrono::duration<_Rep, _Period> & duration);
+    template<typename _Rep, typename _Period>
+    std::optional<EventType> waitChanged(const std::set<EventType> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration);
+    template<typename _Rep, typename _Period>
+    std::optional<EventType> waitChanged(std::map<EventType, int> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration);
+
 private:
     Robot(const Robot &) = delete;
     Robot & operator=(const Robot &) = delete;
@@ -78,6 +110,53 @@ private:
     Values<bool> _switchsIsDetected;
     Values<std::size_t> _ultrasonicsDistanceDetected;
     std::binary_semaphore _isReadySemaphore;
+    std::mutex _eventCvMutex;
+    std::condition_variable _eventCv;
+    std::map<EventType, int> _lastNotifiedEventType;
 };
+
+
+template<typename _Rep, typename _Period>
+bool Robot::waitChanged(EventType eventType, const std::chrono::duration<_Rep, _Period> & duration)
+{
+    auto eventTypes = waitParam({eventType});
+    return waitChanged(eventTypes, duration);
+}
+
+template<typename _Rep, typename _Period>
+bool Robot::waitChanged(EventType eventType, int & changedCount, const std::chrono::duration<_Rep, _Period> & duration)
+{
+    std::map<EventType, int> eventTypes{{eventType, changedCount}};
+    bool toReturn = waitChanged(eventTypes, duration).has_value();
+    changedCount = eventTypes.at(eventType);
+    return toReturn;
+}
+
+template<typename _Rep, typename _Period>
+std::optional<Robot::EventType> Robot::waitChanged(const std::set<EventType> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration)
+{
+    auto eventTypesWithChangedCount = waitParam(eventTypes);
+    return waitChanged(eventTypesWithChangedCount, duration);
+}
+
+template<typename _Rep, typename _Period>
+std::optional<Robot::EventType> Robot::waitChanged(std::map<EventType, int> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration)
+{
+    std::unique_lock<std::mutex> lk(_eventCvMutex);
+    EventType notifiedEventType;
+    if (!_eventCv.wait_for(lk, duration, [eventTypes, &notifiedEventType, lastNotifiedEventType = std::ref(_lastNotifiedEventType)]{
+        for (auto eventType : eventTypes) {
+            if (lastNotifiedEventType.get().at(eventType.first)>eventType.second)
+            {
+                lastNotifiedEventType.get().at(eventType.first) = eventType.second;
+                notifiedEventType = eventType.first;
+                return true;
+            }
+        }
+        return false;
+    }))
+        return {};
+    return notifiedEventType;
+}
 
 #endif

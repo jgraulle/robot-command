@@ -29,10 +29,15 @@ int main(int argc, char ** argv)
     {
         while (true)
         {
-            robot.setMotorsSpeed(1.0, 1.0);
-            robot.getLineTracksIsDetected().waitChanged(0, 1s);
-            robot.setMotorsSpeed(-0.2, 0.2);
-            robot.getLineTracksIsDetected().waitChanged(0, 1s);
+            auto event = robot.waitChanged({Robot::EventType::LINE_TRACKS_IS_DETECTED, Robot::EventType::SWITCHS_IS_DETECTED}, 1s);
+            if (!event.has_value())
+                robot.setMotorsSpeed(1.0, 1.0);
+            else if (event.value() == Robot::EventType::LINE_TRACKS_IS_DETECTED)
+                robot.setMotorsSpeed(-0.2, 0.2);
+            else if (event.value() == Robot::EventType::SWITCHS_IS_DETECTED)
+                robot.setMotorsSpeed(-1.0, -0.8);
+            else
+                std::cout << "error" << std::endl;
         }
     }
     catch (std::exception & e)
