@@ -8,18 +8,7 @@ to be able to commit
 - open VS code from this fork: code . &
 - Build and Run
 
-Step2
-=====
+Step
+====
 
-Add other sensors in project robot-simu and class RobotCommand and project robot-command class Robot
-to be able to use these sensors from robot command.
-
-For each sensor you have to write a kind of command in the main loop to test the current sensor.
-And you have to do a commit in your personal fork after completed each sensor and its test.
-
-The list of sensor is:
-
-- IrProximitySensor
-- SwitchSensor
-- UltrasonicSensor
-- SpeedSensor
+Update the main of this projet to be able to follow the line displayed on de default simulator map.
