@@ -120,7 +120,7 @@ template<typename _Rep, typename _Period>
 bool Robot::waitChanged(EventType eventType, const std::chrono::duration<_Rep, _Period> & duration)
 {
     auto eventTypes = waitParam({eventType});
-    return waitChanged(eventTypes, duration);
+    return waitChanged(eventTypes, duration).has_value();
 }
 
 template<typename _Rep, typename _Period>
