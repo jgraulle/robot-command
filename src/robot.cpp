@@ -41,7 +41,7 @@ Robot::Robot(const std::string & hostIpAddress, uint16_t tcpPort)
         _ultrasonicsDistanceDetected.set(index, params["value"].asUInt(), params["changedCount"].asInt());
     });
     _jsonRpcTcpClient.bindNotification("setIsReady", [this](const Json::Value & params){
-        assert(params.asBool());
+        assert(params.isNull());
         _isReadySemaphore.release();
     });
     _jsonRpcTcpClient.startReceive();
