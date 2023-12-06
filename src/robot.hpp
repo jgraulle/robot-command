@@ -27,7 +27,7 @@ public:
         LINE_TRACKS_VALUE,
         SPEEDS_VALUE,
         SWITCHS_IS_DETECTED,
-        ULTRASONICS_DISTANCE_DETECTED
+        ULTRASOUNDS_DISTANCE_DETECTED
     };
 
     template<typename T>
@@ -73,7 +73,7 @@ public:
     const Values<std::uint8_t> & getLineTracksValue() const {return _lineTracksValue;}
     const Values<std::size_t> & getSpeedValue() const {return _speedsValue;}
     const Values<bool> & getSwitchsIsDetected() const {return _switchsIsDetected;}
-    const Values<std::size_t> & getUltrasonicsDistanceDetected() const {return _ultrasonicsDistanceDetected;}
+    const Values<std::size_t> & getUltrasoundsDistanceDetected() const {return _ultrasoundsDistanceDetected;}
 
     enum class MotorIndex {RIGHT = 0, LEFT = 1};
     static std::string motorIndexToString(MotorIndex motorIndex);
@@ -108,7 +108,7 @@ private:
     Values<std::uint8_t> _lineTracksValue;
     Values<std::size_t> _speedsValue;
     Values<bool> _switchsIsDetected;
-    Values<std::size_t> _ultrasonicsDistanceDetected;
+    Values<std::size_t> _ultrasoundsDistanceDetected;
     std::binary_semaphore _isReadySemaphore;
     std::mutex _eventCvMutex;
     std::condition_variable _eventCv;

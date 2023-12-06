@@ -11,7 +11,7 @@ Robot::Robot(const std::string & hostIpAddress, uint16_t tcpPort)
     , _lineTracksValue(this, EventType::LINE_TRACKS_VALUE)
     , _speedsValue(this, EventType::SPEEDS_VALUE)
     , _switchsIsDetected(this, EventType::SWITCHS_IS_DETECTED)
-    , _ultrasonicsDistanceDetected(this, EventType::ULTRASONICS_DISTANCE_DETECTED)
+    , _ultrasoundsDistanceDetected(this, EventType::ULTRASOUNDS_DISTANCE_DETECTED)
     , _isReadySemaphore(0)
     , _eventCvMutex()
     , _eventCv()
@@ -36,9 +36,9 @@ Robot::Robot(const std::string & hostIpAddress, uint16_t tcpPort)
         std::size_t index = params["index"].asUInt();
         _switchsIsDetected.set(index, params["value"].asBool(), params["changedCount"].asInt());
     });
-    _jsonRpcTcpClient.bindNotification("ultrasonicDistanceDetected", [this](const Json::Value & params){
+    _jsonRpcTcpClient.bindNotification("ultrasoundDistanceDetected", [this](const Json::Value & params){
         std::size_t index = params["index"].asUInt();
-        _ultrasonicsDistanceDetected.set(index, params["value"].asUInt(), params["changedCount"].asInt());
+        _ultrasoundsDistanceDetected.set(index, params["value"].asUInt(), params["changedCount"].asInt());
     });
     _jsonRpcTcpClient.bindNotification("setIsReady", [this](const Json::Value & params){
         assert(params.isNull());
