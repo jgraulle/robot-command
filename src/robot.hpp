@@ -82,7 +82,6 @@ public:
     void setMotorsSpeed(float rightValue, float leftValue);
 
     void notify(EventType eventType, int changedCount);
-    std::map<EventType, int> waitParam(std::set<EventType> eventTypes);
 
     void waitChanged(EventType eventType);
     EventType waitChanged(const std::set<EventType> & eventType);
@@ -103,6 +102,8 @@ private:
     template<typename _Rep, typename _Period>
     std::optional<EventType> waitChangedHelper(std::map<EventType, int> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration);
 
+    std::map<EventType, int> waitParamHelper(std::set<EventType> eventTypes);
+
     JsonRpcTcpClient _jsonRpcTcpClient;
     Values<std::size_t> _irProximitysDistanceDetected;
     Values<bool> _lineTracksIsDetected;
@@ -120,7 +121,7 @@ private:
 template<typename _Rep, typename _Period>
 bool Robot::waitChanged(EventType eventType, const std::chrono::duration<_Rep, _Period> & duration)
 {
-    auto eventTypes = waitParam({eventType});
+    auto eventTypes = waitParamHelper({eventType});
     return waitChangedHelper(eventTypes, duration).has_value();
 }
 
@@ -136,7 +137,7 @@ bool Robot::waitChangedHelper(EventType eventType, int & changedCount, const std
 template<typename _Rep, typename _Period>
 std::optional<Robot::EventType> Robot::waitChanged(const std::set<EventType> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration)
 {
-    auto eventTypesWithChangedCount = waitParam(eventTypes);
+    auto eventTypesWithChangedCount = waitParamHelper(eventTypes);
     return waitChangedHelper(eventTypesWithChangedCount, duration);
 }
 

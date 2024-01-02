@@ -88,29 +88,14 @@ void Robot::notify(EventType eventType, int changedCount)
     _eventCv.notify_all();
 }
 
-std::map<Robot::EventType, int> Robot::waitParam(std::set<EventType> eventTypes)
-{
-    std::map<EventType, int> toReturn;
-    std::unique_lock<std::mutex> lk(_eventCvMutex);
-    for (auto eventType : eventTypes)
-    {
-        int changedCount = -1;
-        auto it = _lastNotifiedEventType.find(eventType);
-        if (it != _lastNotifiedEventType.end())
-            changedCount = it->second;
-        toReturn.insert(std::make_pair(eventType, changedCount));
-    }
-    return toReturn;
-}
-
 void Robot::waitChanged(EventType eventType) {
-    auto eventTypes = waitParam({eventType});
+    auto eventTypes = waitParamHelper({eventType});
     waitChangedHelper(eventTypes);
 }
 
 Robot::EventType Robot::waitChanged(const std::set<EventType> & eventTypes)
 {
-    auto eventTypesWithChangedCount = waitParam(eventTypes);
+    auto eventTypesWithChangedCount = waitParamHelper(eventTypes);
     return waitChangedHelper(eventTypesWithChangedCount);
 }
 
@@ -135,4 +120,19 @@ Robot::EventType Robot::waitChangedHelper(std::map<EventType, int> & eventTypes)
         return false;
     });
     return notifiedEventType;
+}
+
+std::map<Robot::EventType, int> Robot::waitParamHelper(std::set<EventType> eventTypes)
+{
+    std::map<EventType, int> toReturn;
+    std::unique_lock<std::mutex> lk(_eventCvMutex);
+    for (auto eventType : eventTypes)
+    {
+        int changedCount = -1;
+        auto it = _lastNotifiedEventType.find(eventType);
+        if (it != _lastNotifiedEventType.end())
+            changedCount = it->second;
+        toReturn.insert(std::make_pair(eventType, changedCount));
+    }
+    return toReturn;
 }
