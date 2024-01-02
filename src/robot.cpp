@@ -105,22 +105,22 @@ std::map<Robot::EventType, int> Robot::waitParam(std::set<EventType> eventTypes)
 
 void Robot::waitChanged(EventType eventType) {
     auto eventTypes = waitParam({eventType});
-    waitChanged(eventTypes);
+    waitChangedHelper(eventTypes);
 }
 
 Robot::EventType Robot::waitChanged(const std::set<EventType> & eventTypes)
 {
     auto eventTypesWithChangedCount = waitParam(eventTypes);
-    return waitChanged(eventTypesWithChangedCount);
+    return waitChangedHelper(eventTypesWithChangedCount);
 }
 
-void Robot::waitChanged(EventType eventType, int & changedCount) {
+void Robot::waitChangedHelper(EventType eventType, int & changedCount) {
     std::map<EventType, int> eventTypes{{eventType, changedCount}};
-    waitChanged(eventTypes);
+    waitChangedHelper(eventTypes);
     changedCount = eventTypes.at(eventType);
 }
 
-Robot::EventType Robot::waitChanged(std::map<EventType, int> & eventTypes) {
+Robot::EventType Robot::waitChangedHelper(std::map<EventType, int> & eventTypes) {
     std::unique_lock<std::mutex> lk(_eventCvMutex);
     EventType notifiedEventType;
     _eventCv.wait(lk, [eventTypes, &notifiedEventType, lastNotifiedEventType = std::ref(_lastNotifiedEventType)]{

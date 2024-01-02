@@ -85,22 +85,23 @@ public:
     std::map<EventType, int> waitParam(std::set<EventType> eventTypes);
 
     void waitChanged(EventType eventType);
-    void waitChanged(EventType eventType, int & changedCount);
     EventType waitChanged(const std::set<EventType> & eventType);
-    EventType waitChanged(std::map<EventType, int> & eventTypes);
 
     template<typename _Rep, typename _Period>
     bool waitChanged(EventType eventType, const std::chrono::duration<_Rep, _Period> & duration);
     template<typename _Rep, typename _Period>
-    bool waitChanged(EventType eventType, int & changedCount, const std::chrono::duration<_Rep, _Period> & duration);
-    template<typename _Rep, typename _Period>
     std::optional<EventType> waitChanged(const std::set<EventType> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration);
-    template<typename _Rep, typename _Period>
-    std::optional<EventType> waitChanged(std::map<EventType, int> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration);
 
 private:
     Robot(const Robot &) = delete;
     Robot & operator=(const Robot &) = delete;
+
+    void waitChangedHelper(EventType eventType, int & changedCount);
+    EventType waitChangedHelper(std::map<EventType, int> & eventTypes);
+    template<typename _Rep, typename _Period>
+    bool waitChangedHelper(EventType eventType, int & changedCount, const std::chrono::duration<_Rep, _Period> & duration);
+    template<typename _Rep, typename _Period>
+    std::optional<EventType> waitChangedHelper(std::map<EventType, int> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration);
 
     JsonRpcTcpClient _jsonRpcTcpClient;
     Values<std::size_t> _irProximitysDistanceDetected;
@@ -120,14 +121,14 @@ template<typename _Rep, typename _Period>
 bool Robot::waitChanged(EventType eventType, const std::chrono::duration<_Rep, _Period> & duration)
 {
     auto eventTypes = waitParam({eventType});
-    return waitChanged(eventTypes, duration).has_value();
+    return waitChangedHelper(eventTypes, duration).has_value();
 }
 
 template<typename _Rep, typename _Period>
-bool Robot::waitChanged(EventType eventType, int & changedCount, const std::chrono::duration<_Rep, _Period> & duration)
+bool Robot::waitChangedHelper(EventType eventType, int & changedCount, const std::chrono::duration<_Rep, _Period> & duration)
 {
     std::map<EventType, int> eventTypes{{eventType, changedCount}};
-    bool toReturn = waitChanged(eventTypes, duration).has_value();
+    bool toReturn = waitChangedHelper(eventTypes, duration).has_value();
     changedCount = eventTypes.at(eventType);
     return toReturn;
 }
@@ -136,11 +137,11 @@ template<typename _Rep, typename _Period>
 std::optional<Robot::EventType> Robot::waitChanged(const std::set<EventType> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration)
 {
     auto eventTypesWithChangedCount = waitParam(eventTypes);
-    return waitChanged(eventTypesWithChangedCount, duration);
+    return waitChangedHelper(eventTypesWithChangedCount, duration);
 }
 
 template<typename _Rep, typename _Period>
-std::optional<Robot::EventType> Robot::waitChanged(std::map<EventType, int> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration)
+std::optional<Robot::EventType> Robot::waitChangedHelper(std::map<EventType, int> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration)
 {
     std::unique_lock<std::mutex> lk(_eventCvMutex);
     EventType notifiedEventType;
