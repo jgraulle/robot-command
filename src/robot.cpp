@@ -9,7 +9,7 @@ Robot::Robot(const std::string & hostIpAddress, uint16_t tcpPort)
     , _irProximitysDistanceDetected(this, EventType::IR_PROXIMITYS_DISTANCE_DETECTED)
     , _lineTracksIsDetected(this, EventType::LINE_TRACKS_IS_DETECTED)
     , _lineTracksValue(this, EventType::LINE_TRACKS_VALUE)
-    , _speedsValue(this, EventType::SPEEDS_VALUE)
+    , _encoderWheelsValue(this, EventType::ENCODER_WHEELS_VALUE)
     , _switchsIsDetected(this, EventType::SWITCHS_IS_DETECTED)
     , _ultrasoundsDistanceDetected(this, EventType::ULTRASOUNDS_DISTANCE_DETECTED)
     , _isReadySemaphore(0)
@@ -28,9 +28,9 @@ Robot::Robot(const std::string & hostIpAddress, uint16_t tcpPort)
         std::size_t index = params["index"].asUInt();
         _lineTracksValue.set(index, params["value"].asUInt(), params["changedCount"].asInt());
     });
-    _jsonRpcTcpClient.bindNotification("speedValue", [this](const Json::Value & params){
+    _jsonRpcTcpClient.bindNotification("encoderWheelValue", [this](const Json::Value & params){
         std::size_t index = params["index"].asUInt();
-        _speedsValue.set(index, params["value"].asUInt(), params["changedCount"].asInt());
+        _encoderWheelsValue.set(index, params["value"].asUInt(), params["changedCount"].asInt());
     });
     _jsonRpcTcpClient.bindNotification("switchIsDetected", [this](const Json::Value & params){
         std::size_t index = params["index"].asUInt();

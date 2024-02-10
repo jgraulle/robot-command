@@ -25,7 +25,7 @@ public:
         IR_PROXIMITYS_DISTANCE_DETECTED,
         LINE_TRACKS_IS_DETECTED,
         LINE_TRACKS_VALUE,
-        SPEEDS_VALUE,
+        ENCODER_WHEELS_VALUE,
         SWITCHS_IS_DETECTED,
         ULTRASOUNDS_DISTANCE_DETECTED
     };
@@ -71,7 +71,7 @@ public:
     const Values<std::size_t> & getIrProximitysDistanceDetected() const {return _irProximitysDistanceDetected;}
     const Values<bool> & getLineTracksIsDetected() const {return _lineTracksIsDetected;}
     const Values<std::uint8_t> & getLineTracksValue() const {return _lineTracksValue;}
-    const Values<std::size_t> & getSpeedValue() const {return _speedsValue;}
+    const Values<std::size_t> & getEncoderWheelValue() const {return _encoderWheelsValue;}
     const Values<bool> & getSwitchsIsDetected() const {return _switchsIsDetected;}
     const Values<std::size_t> & getUltrasoundsDistanceDetected() const {return _ultrasoundsDistanceDetected;}
 
@@ -108,7 +108,7 @@ private:
     Values<std::size_t> _irProximitysDistanceDetected;
     Values<bool> _lineTracksIsDetected;
     Values<std::uint8_t> _lineTracksValue;
-    Values<std::size_t> _speedsValue;
+    Values<std::size_t> _encoderWheelsValue;
     Values<bool> _switchsIsDetected;
     Values<std::size_t> _ultrasoundsDistanceDetected;
     std::binary_semaphore _isReadySemaphore;
