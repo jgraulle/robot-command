@@ -32,14 +32,14 @@ int main(int argc, char ** argv)
             auto event = robot.waitChanged({Robot::EventType::LINE_TRACKS_IS_DETECTED, Robot::EventType::SWITCHS_IS_DETECTED}, 0.5s);
             bool lineTrackValue = robot.getLineTracksIsDetected().get(0);
             if (!event.has_value())
-                robot.setMotorsSpeed(1.0, 1.0);
+                robot.setMotorsPower(1.0, 1.0);
             else if (event.value() == Robot::EventType::LINE_TRACKS_IS_DETECTED)
                 if (lineTrackValue)
-                    robot.setMotorsSpeed(-0.2, 0.2);
+                    robot.setMotorsPower(-0.2, 0.2);
                 else
-                    robot.setMotorsSpeed(-0.1, 0.1);
+                    robot.setMotorsPower(-0.1, 0.1);
             else if (event.value() == Robot::EventType::SWITCHS_IS_DETECTED)
-                robot.setMotorsSpeed(-1.0, -0.8);
+                robot.setMotorsPower(-1.0, -0.8);
             else
                 std::cout << "error" << std::endl;
         }

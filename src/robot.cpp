@@ -63,20 +63,20 @@ std::string Robot::motorIndexToString(MotorIndex motorIndex)
             + std::to_string(static_cast<int>(motorIndex)) + " into Robot::MotorIndex");
 }
 
-void Robot::setMotorSpeed(MotorIndex motorIndex, float value)
+void Robot::setMotorPower(MotorIndex motorIndex, float value)
 {
     Json::Value params;
     params["motorIndex"] = motorIndexToString(motorIndex);
     params["value"] = value;
-    _jsonRpcTcpClient.callNotification("setMotorSpeed", params);
+    _jsonRpcTcpClient.callNotification("setMotorPower", params);
 
 }
-void Robot::setMotorsSpeed(float rightValue, float leftValue)
+void Robot::setMotorsPower(float rightValue, float leftValue)
 {
     Json::Value params;
     params["rightValue"] = rightValue;
     params["leftValue"] = leftValue;
-    _jsonRpcTcpClient.callNotification("setMotorsSpeed", params);
+    _jsonRpcTcpClient.callNotification("setMotorsPower", params);
 }
 
 void Robot::notify(EventType eventType, int changedCount)

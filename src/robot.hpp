@@ -78,8 +78,8 @@ public:
     enum class MotorIndex {RIGHT = 0, LEFT = 1};
     static std::string motorIndexToString(MotorIndex motorIndex);
 
-    void setMotorSpeed(MotorIndex motorIndex, float value);
-    void setMotorsSpeed(float rightValue, float leftValue);
+    void setMotorPower(MotorIndex motorIndex, float value);
+    void setMotorsPower(float rightValue, float leftValue);
 
     void notify(EventType eventType, int changedCount);
 
