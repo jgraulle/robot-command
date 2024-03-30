@@ -6,12 +6,12 @@
 
 Robot::Robot(const std::string & hostIpAddress, uint16_t tcpPort)
     : _jsonRpcTcpClient(hostIpAddress, tcpPort)
-    , _irProximitysDistanceDetected(this, EventType::IR_PROXIMITYS_DISTANCE_DETECTED)
-    , _lineTracksIsDetected(this, EventType::LINE_TRACKS_IS_DETECTED)
-    , _lineTracksValue(this, EventType::LINE_TRACKS_VALUE)
-    , _encoderWheelsValue(this, EventType::ENCODER_WHEELS_VALUE)
-    , _switchsIsDetected(this, EventType::SWITCHS_IS_DETECTED)
-    , _ultrasoundsDistanceDetected(this, EventType::ULTRASOUNDS_DISTANCE_DETECTED)
+    , _irProximitysDistanceDetected(this)
+    , _lineTracksIsDetected(this)
+    , _lineTracksValue(this)
+    , _encoderWheelsValue(this)
+    , _switchsIsDetected(this)
+    , _ultrasoundsDistanceDetected(this)
     , _isReadySemaphore(0)
     , _eventCvMutex()
     , _eventCv()
@@ -50,23 +50,10 @@ Robot::Robot(const std::string & hostIpAddress, uint16_t tcpPort)
 Robot::~Robot()
 {}
 
-std::string Robot::motorIndexToString(MotorIndex motorIndex)
-{
-    switch (motorIndex)
-    {
-        case MotorIndex::RIGHT:
-            return "RIGHT";
-        case MotorIndex::LEFT:
-            return "LEFT";
-    }
-    throw std::invalid_argument(std::string("Cannot convert ")
-            + std::to_string(static_cast<int>(motorIndex)) + " into Robot::MotorIndex");
-}
-
 void Robot::setMotorPower(MotorIndex motorIndex, float value)
 {
     Json::Value params;
-    params["motorIndex"] = motorIndexToString(motorIndex);
+    params["motorIndex"] = motorIndexToStringHelper(motorIndex);
     params["value"] = value;
     _jsonRpcTcpClient.callNotification("setMotorPower", params);
 
@@ -79,6 +66,17 @@ void Robot::setMotorsPower(float rightValue, float leftValue)
     _jsonRpcTcpClient.callNotification("setMotorsPower", params);
 }
 
+void Robot::waitChanged(EventType eventType) {
+    auto eventTypes = waitParamHelper({eventType});
+    waitChangedHelper(eventTypes);
+}
+
+EventType Robot::waitChanged(const std::set<EventType> & eventTypes)
+{
+    auto eventTypesWithChangedCount = waitParamHelper(eventTypes);
+    return waitChangedHelper(eventTypesWithChangedCount);
+}
+
 void Robot::notify(EventType eventType, int changedCount)
 {
     {
@@ -88,15 +86,17 @@ void Robot::notify(EventType eventType, int changedCount)
     _eventCv.notify_all();
 }
 
-void Robot::waitChanged(EventType eventType) {
-    auto eventTypes = waitParamHelper({eventType});
-    waitChangedHelper(eventTypes);
-}
-
-Robot::EventType Robot::waitChanged(const std::set<EventType> & eventTypes)
+std::string Robot::motorIndexToStringHelper(MotorIndex motorIndex)
 {
-    auto eventTypesWithChangedCount = waitParamHelper(eventTypes);
-    return waitChangedHelper(eventTypesWithChangedCount);
+    switch (motorIndex)
+    {
+        case MotorIndex::RIGHT:
+            return "RIGHT";
+        case MotorIndex::LEFT:
+            return "LEFT";
+    }
+    throw std::invalid_argument(std::string("Cannot convert ")
+            + std::to_string(static_cast<int>(motorIndex)) + " into Robot::MotorIndex");
 }
 
 void Robot::waitChangedHelper(EventType eventType, int & changedCount) {
@@ -105,7 +105,7 @@ void Robot::waitChangedHelper(EventType eventType, int & changedCount) {
     changedCount = eventTypes.at(eventType);
 }
 
-Robot::EventType Robot::waitChangedHelper(std::map<EventType, int> & eventTypes) {
+EventType Robot::waitChangedHelper(std::map<EventType, int> & eventTypes) {
     std::unique_lock<std::mutex> lk(_eventCvMutex);
     EventType notifiedEventType;
     _eventCv.wait(lk, [eventTypes, &notifiedEventType, lastNotifiedEventType = std::ref(_lastNotifiedEventType)]{
@@ -122,7 +122,7 @@ Robot::EventType Robot::waitChangedHelper(std::map<EventType, int> & eventTypes)
     return notifiedEventType;
 }
 
-std::map<Robot::EventType, int> Robot::waitParamHelper(std::set<EventType> eventTypes)
+std::map<EventType, int> Robot::waitParamHelper(std::set<EventType> eventTypes)
 {
     std::map<EventType, int> toReturn;
     std::unique_lock<std::mutex> lk(_eventCvMutex);
