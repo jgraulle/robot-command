@@ -94,7 +94,7 @@ Json::Value JsonRpcTcpClient::callMethod(const char * methodName, const Json::Va
 #endif
     _receiveMethodResponseSem.acquire();
     Json::Value responseJson = _receiveMethodResponseJsonValue;
-    assert(_jsonRpcId == responseJson["id"]);
+    assert(_jsonRpcId == responseJson["id"].asInt());
     _receiveMethodResponseJsonValue = Json::Value();
 
 #ifdef JSONRPC_DEBUG
