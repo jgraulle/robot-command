@@ -19,8 +19,8 @@ class Values
 public:
     Values(IRobot<EventType> * robot) : _robot(robot) {}
 
-    inline T get(std::size_t index) const {const std::lock_guard<std::mutex> lock(_mutex); return _values.at(index)._value.value();}
-    inline int getChangedCount(std::size_t index) const {const std::lock_guard<std::mutex> lock(_mutex); return _values.at(index)._changedCount.value();}
+    inline T get(std::size_t index) const {const std::lock_guard<std::mutex> lock(_mutex); if (index>=_values.size()) return {}; return _values.at(index)._value.value();}
+    inline int getChangedCount(std::size_t index) const {const std::lock_guard<std::mutex> lock(_mutex); if (index>=_values.size()) return 0; return _values.at(index)._changedCount.value();}
     void set(std::size_t index, T v, int changedCount)
     {
         const std::lock_guard<std::mutex> lock(_mutex);
