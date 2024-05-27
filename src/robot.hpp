@@ -90,10 +90,7 @@ private:
     void notify(EventType eventType, int changedCount) override;
 
     static std::string motorIndexToStringHelper(MotorIndex motorIndex);
-    void waitChangedHelper(EventType eventType, int & changedCount);
     EventType waitChangedHelper(std::map<EventType, int> & eventTypes);
-    template<typename _Rep, typename _Period>
-    bool waitChangedHelper(EventType eventType, int & changedCount, const std::chrono::duration<_Rep, _Period> & duration);
     template<typename _Rep, typename _Period>
     std::optional<EventType> waitChangedHelper(std::map<EventType, int> & eventTypes, const std::chrono::duration<_Rep, _Period> & duration);
     std::map<EventType, int> waitParamHelper(std::set<EventType> eventTypes);
@@ -117,15 +114,6 @@ bool Robot::waitChanged(EventType eventType, const std::chrono::duration<_Rep, _
 {
     auto eventTypes = waitParamHelper({eventType});
     return waitChangedHelper(eventTypes, duration).has_value();
-}
-
-template<typename _Rep, typename _Period>
-bool Robot::waitChangedHelper(EventType eventType, int & changedCount, const std::chrono::duration<_Rep, _Period> & duration)
-{
-    std::map<EventType, int> eventTypes{{eventType, changedCount}};
-    bool toReturn = waitChangedHelper(eventTypes, duration).has_value();
-    changedCount = eventTypes.at(eventType);
-    return toReturn;
 }
 
 template<typename _Rep, typename _Period>

@@ -99,12 +99,6 @@ std::string Robot::motorIndexToStringHelper(MotorIndex motorIndex)
             + std::to_string(static_cast<int>(motorIndex)) + " into Robot::MotorIndex");
 }
 
-void Robot::waitChangedHelper(EventType eventType, int & changedCount) {
-    std::map<EventType, int> eventTypes{{eventType, changedCount}};
-    waitChangedHelper(eventTypes);
-    changedCount = eventTypes.at(eventType);
-}
-
 EventType Robot::waitChangedHelper(std::map<EventType, int> & eventTypes) {
     std::unique_lock<std::mutex> lk(_eventCvMutex);
     EventType notifiedEventType;
