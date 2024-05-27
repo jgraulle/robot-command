@@ -110,9 +110,11 @@ EventType Robot::waitChangedHelper(std::map<EventType, int> & eventTypes) {
     EventType notifiedEventType;
     _eventCv.wait(lk, [eventTypes, &notifiedEventType, lastNotifiedEventType = std::ref(_lastNotifiedEventType)]{
         for (auto eventType : eventTypes) {
-            if (lastNotifiedEventType.get().at(eventType.first)>eventType.second)
+            auto itFind = lastNotifiedEventType.get().find(eventType.first);
+            if (   itFind != lastNotifiedEventType.get().end()
+                && itFind->second > eventType.second)
             {
-                lastNotifiedEventType.get().at(eventType.first) = eventType.second;
+                itFind->second = eventType.second;
                 notifiedEventType = eventType.first;
                 return true;
             }
